@@ -3,24 +3,18 @@ import json, os
 
 class TaskManager:
     def __init__(self):
-        self.tasks: dict[int, Task] = {}
-        self._next_id = 1
+        self.tasks = []
 
-    def add_task(self, description: str):
+    def add_task(self, description: str) -> bool:
         if not isinstance(description, str) or not description.strip():
             print("Описание задачи не может быть пустым!")
             return False
 
-        self.tasks[self._get_next_id()] = Task(description)
+        self.tasks.append(Task(description))
         print(f"Добавлена новая задача - \"{description}\"")
         return True
 
-    def _get_next_id(self):
-        task_id = self._next_id
-        self._next_id += 1
-        return task_id
-
-    def complete_task(self, index: int):
+    def complete_task(self, index: int) -> bool:
         if self.is_valid_index(index):
             if self.tasks[index].completed:
                 print("Задача уже выполнена")
@@ -30,7 +24,7 @@ class TaskManager:
         print("Задачи с таким индексом нету")
         return False
 
-    def remove_task(self, index: int):
+    def remove_task(self, index: int) -> bool:
         if self.is_valid_index(index):
             task_description = self.tasks[index].description
             del self.tasks[index]
@@ -39,11 +33,10 @@ class TaskManager:
         print("Задачи с таким индексом нету")
         return False
 
-
-    def save_to_json(self, filename: str):
+    def save_to_json(self, filename: str) -> bool:
         try:
             data = {
-                task_id: task.to_dict() for task_id, task in self.tasks.items()
+                self.tasks.index(task): task.to_dict() for task in self.tasks
             }
 
             with open(filename, "w", encoding="UTF-8") as file:
@@ -54,7 +47,7 @@ class TaskManager:
             print(f"Ошибка сохранения: {exception}")
             return False
 
-    def load_from_json(self, filename: str):
+    def load_from_json(self, filename: str) -> bool:
         if not os.path.exists(filename):
             print(f"Файл не найден: {filename}")
             return False
@@ -86,12 +79,12 @@ class TaskManager:
     def get_tasks(self):
         return self.tasks.copy()
 
-    def is_valid_index(self, index: int):
-        return isinstance(index, int) and index in self.tasks.keys()
+    def is_valid_index(self, index: int) -> bool:
+        return isinstance(index, int) and index < len(self.tasks)
 
 
 class Task:
-    def __init__(self, description: str, is_completed: bool = False):
+    def __init__(self, description: str, is_completed: bool = False) -> None:
         self.description = description.strip()
         self.completed = is_completed
 
