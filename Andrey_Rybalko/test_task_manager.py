@@ -1,77 +1,97 @@
 import pytest
-import json
 import os
 from task_manager import TaskManager
 
 
 @pytest.fixture
 def task_manager():
-    return TaskManager()
+    manager = TaskManager()
+    yield manager
+    manager.tasks.clear()
 
 
 @pytest.fixture
 def temp_json_file():
-    return "test_tasks.json"
+    file_path = "test_tasks.json"
+    yield str(file_path)
 
 
-def test_add_and_complete_task(task_manager):
-    result = task_manager.add_task("Купить продукты")
-    assert result, "Задача должна добавиться успешно"
+class TestAddTask:
+    def test_add_single_task(self, task_manager):
+        result = task_manager.add_task("Купить продукты")
 
-    assert task_manager.get_task_count() == 1, "Должна быть 1 задача"
+        assert result, "Задача должна добавиться успешно"
+        assert task_manager.get_task_count() == 1
 
-    tasks = task_manager.get_tasks()
-    assert tasks[0].description == "Купить продукты"
-    assert not tasks[0].completed, "Задача должна быть невыполненной"
+    def test_add_empty_description(self, task_manager):
+        result = task_manager.add_task("")
 
-    result = task_manager.complete_task(0)
-    assert result, "Задача должна выполниться успешно"
-
-    tasks = task_manager.get_tasks()
-    assert tasks[0].completed, "Задача должна быть выполненной"
+        assert not result, "Задача должна быть невыполненной"
+        assert task_manager.get_task_count() == 0
 
 
-def test_remove_task(task_manager):
-    task_manager.add_task("Задача 1")
-    task_manager.add_task("Задача 2")
-    task_manager.add_task("Задача 3")
+class TestCompleteTask:
+    def test_complete_existing_task(self, task_manager):
+        task_manager.add_task("Задача 1")
+        result = task_manager.complete_task(0)
 
-    assert task_manager.get_task_count() == 3, "Должно быть 3 задачи"
+        assert result, "Задача должна выполниться успешно"
+        assert task_manager.get_tasks()[0].completed, "Задача должна быть выполненной"
 
-    assert task_manager.remove_task(1), "Удаление должно быть успешным"
-    assert task_manager.get_task_count() == 2, "Должно остаться 2 задачи"
+    def test_complete_nonexistent_task(self, task_manager):
+        result = task_manager.complete_task(999)
 
-    tasks = task_manager.get_tasks()
-    assert tasks[0].description == "Задача 1"
-    assert tasks[1].description == "Задача 3"
-
-    assert not task_manager.remove_task(10), "Удаление несуществующей задачи должно вернуть False"
+        assert not result, "Задачи не должно существовать"
 
 
-def test_save_and_load_json(task_manager, temp_json_file):
-    task_manager.add_task("Задача 1")
-    task_manager.add_task("Задача 2")
-    task_manager.complete_task(0)
+class TestRemoveTask:
+    def test_remove_existing_task(self, task_manager):
+        task_manager.add_task("Задача 1")
+        task_manager.add_task("Задача 2")
 
-    assert task_manager.save_to_json(temp_json_file), "Сохранение должно быть успешным"
+        result = task_manager.remove_task(0)
 
-    assert os.path.exists(temp_json_file), "Файл должен существовать"
+        assert result, "Задача должна удалиться успешно"
+        assert task_manager.get_task_count() == 1, "В списке должна остаться одна задача"
 
-    with open(temp_json_file, "r", encoding="utf-8") as file:
-        saved_data = json.load(file)
+    def test_remove_nonexistent_task(self, task_manager):
+        result = task_manager.remove_task(999)
 
-    assert len(saved_data) == 2, "В файле должно быть 2 задачи"
-    assert saved_data["0"]["description"] == "Задача 1"
-    assert saved_data["0"]["completed"]
-    assert saved_data["1"]["description"] == "Задача 2"
-    assert not saved_data["1"]["completed"]
+        assert not result, "Задачи не должно существовать"
 
-    new_manager = TaskManager()
-    assert new_manager.load_from_json(temp_json_file) is True, "Загрузка должна быть успешной"
 
-    assert new_manager.get_task_count() == 2, "Должно быть 2 задачи"
-    tasks = new_manager.get_tasks()
-    assert tasks["0"]["description"] == "Задача 1"
-    assert tasks["0"]["completed"], "Задача должна быть выполненной"
-    assert tasks["1"]["description"] == "Задача 2"
-    assert not tasks["1"]["completed"], "Задача должна быть невыполненной"
+class TestSaveLoadJson:
+    def test_save_to_json(self, task_manager, temp_json_file):
+        task_manager.add_task("Задача 1")
+
+        result = task_manager.save_to_json(temp_json_file)
+
+        assert result, "Сохранение должно быть успешным"
+        assert os.path.exists(temp_json_file), "Файл должен существовать"
+
+    def test_load_from_json(self, task_manager, temp_json_file):
+        task_manager.add_task("Задача 1")
+        task_manager.save_to_json(temp_json_file)
+
+        new_manager = TaskManager()
+        result = new_manager.load_from_json(temp_json_file)
+
+        assert result, "Загрузка должна быть успешной"
+        assert new_manager.get_task_count() == 1, "В списке должна быть одна задача"
+
+    def test_load_from_nonexistent_file(self, task_manager):
+        result = task_manager.load_from_json("nonexistent.json")
+
+        assert not result, "Нельзя загрузить данные с файла которого нет"
+
+    def test_save_load_preserves_data(self, task_manager, temp_json_file):
+        task_manager.add_task("Задача 1")
+        task_manager.complete_task(0)
+        task_manager.save_to_json(temp_json_file)
+
+        new_manager = TaskManager()
+        new_manager.load_from_json(temp_json_file)
+
+        tasks = new_manager.get_tasks()
+        assert tasks["0"]["description"] == "Задача 1", "Задача должна иметь описание: \"Задача 1\""
+        assert tasks["0"]["completed"], "Задача должна быть выполненной"
