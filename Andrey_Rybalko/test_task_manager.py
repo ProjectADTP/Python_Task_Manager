@@ -93,5 +93,5 @@ class TestSaveLoadJson:
         new_manager.load_from_json(temp_json_file)
 
         tasks = new_manager.get_tasks()
-        assert tasks["0"]["description"] == "Задача 1", "Задача должна иметь описание: \"Задача 1\""
-        assert tasks["0"]["completed"], "Задача должна быть выполненной"
+        assert tasks[0].description == "Задача 1", "Задача должна иметь описание: \"Задача 1\""
+        assert tasks[0].completed, "Задача должна быть выполненной"

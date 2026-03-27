@@ -35,16 +35,18 @@ class TaskManager:
 
     def save_to_json(self, filename: str) -> bool:
         try:
-            data = {
-                self.tasks.index(task): task.to_dict() for task in self.tasks
-            }
+            data = [task.to_dict() for task in self.tasks]
 
             with open(filename, "w", encoding="UTF-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
             print(f"Задачи сохранены в файл: {filename}")
             return True
-        except Exception as exception:
-            print(f"Ошибка сохранения: {exception}")
+
+        except PermissionError:
+            print(f"Нет прав на запись в файл: {filename}")
+            return False
+        except TypeError as exception:
+            print(f"Ошибка сериализации данных: {exception}")
             return False
 
     def load_from_json(self, filename: str) -> bool:
@@ -54,14 +56,18 @@ class TaskManager:
 
         try:
             with open(filename, "r", encoding="utf-8") as file:
-                self.tasks = json.load(file)
+                self.tasks = [Task.from_dict(task_data) for task_data in json.load(file)]
             print(f"Задачи загружены из файла: {filename}")
             return True
+
         except json.JSONDecodeError:
             print(f"Ошибка чтения JSON: {filename}")
             return False
-        except Exception as exception:
-            print(f" Ошибка загрузки: {exception}")
+        except FileNotFoundError:
+            print(f"Файл не найден: {filename}")
+            return False
+        except PermissionError:
+            print(f"Нет прав на чтение файла: {filename}")
             return False
 
     def list_tasks(self):
@@ -70,7 +76,7 @@ class TaskManager:
         if not self.tasks:
             print("Список задач пуст!")
         else:
-            for i, task in self.tasks:
+            for i, task in enumerate(self.tasks):
                 print(f"{i}. {task}")
 
     def get_task_count(self):
@@ -84,15 +90,23 @@ class TaskManager:
 
 
 class Task:
-    def __init__(self, description: str, is_completed: bool = False) -> None:
-        self.description = description.strip()
-        self.completed = is_completed
+    def __init__(self, description: str, completed: bool = False) -> None:
+        self.description = description
+        self.completed = completed
 
     def to_dict(self):
         return {
             "description": self.description,
             "completed": self.completed
         }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            description=data["description"],
+            completed=data["completed"]
+        )
+
 
     def __str__(self):
         return f"{self.description} [{"Выполнена" if self.completed else "Не выполнена"}] "
