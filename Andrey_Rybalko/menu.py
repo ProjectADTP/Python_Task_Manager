@@ -1,19 +1,69 @@
 from task_manager import TaskManager
 
+class Menu:
+    def __init__(self, manager: TaskManager, filename: str) -> None:
+        self.manager = manager
+        self.filename = filename
+        self._init_commands()
 
-def show_menu():
-    print("\nСписок команд:")
-    print("1. Добавить задачу")
-    print("2. Отметить задачу выполненной")
-    print("3. Удалить задачу")
-    print("4. Показать список задач")
-    print("5. Сохранить в файл")
-    print("6. Загрузить из файла")
-    print("0. Выход\n")
+    def _init_commands(self):
+        self.commands = {
+            "1": (self._add_task, "Добавить задачу"),
+            "2": (self._complete_task, "Отметить задачу выполненной"),
+            "3": (self._remove_task, "Удалить задачу"),
+            "4": (self._list_tasks, "Показать список задач"),
+            "5": (self._save, "Сохранить в файл"),
+            "6": (self._load, "Загрузить из файла"),
+            "0": (self._exit, "Выход"),
+        }
 
+    def _add_task(self):
+        self.manager.add_task(input("Введите описание задачи: "))
+        return True
 
-def get_user_input():
-    return input("Выберите команду (0-6): ")
+    def _complete_task(self):
+        try:
+            self.manager.complete_task(int(input("Введите индекс задачи: ")))
+        except ValueError:
+            print("Индекс должен быть числом!")
+        return True
+
+    def _remove_task(self):
+        try:
+            self.manager.remove_task(int(input("Введите индекс задачи: ")))
+        except ValueError:
+            print("Индекс должен быть числом!")
+        return True
+
+    def _list_tasks(self):
+        self.manager.list_tasks()
+        return True
+
+    def _save(self):
+        self.manager.save_to_json(self.filename)
+        return True
+
+    def _load(self):
+        self.manager.load_from_json(self.filename)
+        return True
+
+    def _exit(self):
+        self.manager.save_to_json(self.filename)
+        print("\nРабота программы завершена!")
+        return False
+
+    def show(self):
+        print("\nСписок задач:")
+
+        for key, (_, description) in sorted(self.commands.items()):
+            print(f"{key}. {description}")
+
+    def execute_command(self, choice: str):
+        if choice in self.commands:
+            return self.commands[choice][0]()
+        else:
+            print("Неизвестная команда!")
+            return True
 
 
 def main():
@@ -22,42 +72,12 @@ def main():
 
     manager.load_from_json(filename)
 
-    while True:
-        show_menu()
-        user_input = get_user_input()
+    menu = Menu(manager, filename)
+    menu.show()
 
-        match user_input:
-            case "1":
-                manager.add_task(input("Введите описание задачи: "))
-
-            case "2":
-                try:
-                    manager.complete_task(int(input("Введите индекс задачи: ")))
-                except ValueError:
-                    print("Индекс должен быть числом!")
-
-            case "3":
-                try:
-                    manager.remove_task(int(input("Введите индекс задачи: ")))
-                except ValueError:
-                    print("Индекс должен быть числом!")
-
-            case "4":
-                manager.list_tasks()
-
-            case "5":
-                manager.save_to_json(filename)
-
-            case "6":
-                manager.load_from_json(filename)
-
-            case "0":
-                manager.save_to_json(filename)
-                print("До свидания!")
-                break
-
-            case _:
-                print("Неизвестная команда!")
+    running = True
+    while running:
+        running = menu.execute_command(input("\nВведите команду: "))
 
 
 if __name__ == "__main__":

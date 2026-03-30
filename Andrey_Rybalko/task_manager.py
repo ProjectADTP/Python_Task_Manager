@@ -20,6 +20,7 @@ class TaskManager:
                 print("Задача уже выполнена")
                 return False
             self.tasks[index].completed = True
+            print(f"Задача \"{self.tasks[index].description}\" выполнена")
             return True
         print("Задачи с таким индексом нету")
         return False
